@@ -42,15 +42,16 @@ var successInsertTweet = function (data, res, obj) {
 var successTweet = function (data, res, obj) {
   	var tweetObj = JSON.parse(data);
   	var value = JSON.parse("{}");
+  	var map = {};
+  	for(var i = 0; i < tweetObj.length; i++)
+  	{
+  		map[tweetObj[i].id_str] = tweetObj[i].text;
+  	}
   	for(var i = 0; i < obj.length; i++)
   	{
   		if(obj[i].snType == 'TWITTER')
   		{
-  			for(var j = 0; j < tweetObj.length; j++)
-  			{
-  				if(tweetObj[j].id == obj[i].snMsgId)
-  					value[obj[i].snMsgId] = tweetObj[j].text;
-  			}
+  			value[obj[i].snMsgId] = map[obj[i].snMsgId];
   		}
   	}
   	res.setHeader('Content-Type', 'application/json');
@@ -60,16 +61,17 @@ var successTweet = function (data, res, obj) {
 var successPopulateTweet1 = function (data, res, obj) {
   	var tweetObj = JSON.parse(data);
   	var user_id = obj[0].senderProfile.snId;
-  	obj[0].messageText = tweetObj[0].text;
+  	var map = {};
+  	for(var i = 0; i < tweetObj.length; i++)
+  	{
+  		map[tweetObj[i].id_str] = tweetObj[i].text;
+  	}
+  	obj[0].messageText = map[obj[0].snMsgId];
   	for(var i = 1; i < obj.length; i++)
   	{
   		if(obj[i].snType == 'TWITTER')
   		{
-  			for(var j = 0; j < tweetObj.length; j++)
-  			{
-  				if(tweetObj[j].id == obj[i].snMsgId)
-  					obj[i].messageText = tweetObj[j].text;
-  			}
+  			obj[i].messageText = map[obj[i].snMsgId];
   			user_id = user_id + ',' + obj[i].senderProfile.snId;
   		}
   	}
