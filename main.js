@@ -40,41 +40,13 @@ var successInsertTweet = function (data, res, obj) {
 
 var successTweet = function (data, res, obj) {
   	var tweetObj = JSON.parse(data);
-  	var value = JSON.parse("{}");
   	var map = {};
   	for(var i = 0; i < tweetObj.length; i++)
   	{
   		map[tweetObj[i].id_str] = tweetObj[i].text;
-  	}
-  	for(var i = 0; i < obj.length; i++)
-  	{
-  		if(obj[i].snType == 'TWITTER')
-  		{
-  			value[obj[i].snMsgId] = map[obj[i].snMsgId];
-  		}
   	}
   	res.setHeader('Content-Type', 'application/json');
-  	res.send(value);
-};
-
-var successPopulateTweet1 = function (data, res, obj) {
-  	var tweetObj = JSON.parse(data);
-  	var user_id = obj[0].senderProfile.snId;
-  	var map = {};
-  	for(var i = 0; i < tweetObj.length; i++)
-  	{
-  		map[tweetObj[i].id_str] = tweetObj[i].text;
-  	}
-  	obj[0].messageText = map[obj[0].snMsgId];
-  	for(var i = 1; i < obj.length; i++)
-  	{
-  		if(obj[i].snType == 'TWITTER')
-  		{
-  			obj[i].messageText = map[obj[i].snMsgId];
-  			user_id = user_id + ',' + obj[i].senderProfile.snId;
-  		}
-  	}
-  	twitter.getCustomApiCall('/users/lookup.json', {user_id}, error, successPopulateTweet, res, obj);
+  	res.send(map);
 };
 
 var successPopulateTweet = function (data, res, obj) {
@@ -82,12 +54,15 @@ var successPopulateTweet = function (data, res, obj) {
   	var map = {};
   	for(var i = 0; i < tweetObj.length; i++)
   	{
-  		map[tweetObj[i].id_str] = tweetObj[i].screen_name;
+  		map[tweetObj[i].id_str] = tweetObj[i];
   	}
   	for(var i = 0; i < obj.length; i++)
   	{
   		if(obj[i].snType == 'TWITTER')
-  			obj[i].senderProfile.user_handle = map[obj[i].senderProfile.snId];
+  		{
+  			obj[i].messageText = map[obj[i].snMsgId].text;
+  			obj[i].senderProfile.user_handle = map[obj[i].snMsgId].user.screen_name;
+  		}
   	}
   	res.setHeader('Content-Type', 'application/json');
   	res.send(obj);
@@ -219,7 +194,7 @@ app.get('/populateTweet', function (request, res1) {
 					if(obj[i].snType == 'TWITTER')
 						id = id + ',' + obj[i].snMsgId;
 				}
-				twitter.getCustomApiCall('/statuses/lookup.json', {id}, error, successPopulateTweet1, res1, obj);
+				twitter.getCustomApiCall('/statuses/lookup.json', {id}, error, successPopulateTweet, res1, obj);
 			}
 			catch(err){
 				console.log("Error parsing JSON object from sprinklr API call.");
