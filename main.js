@@ -73,11 +73,13 @@ app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, key");
   next();
 });
+
+
 //------------------------------------Start of handlers for get requests.-----------------------------------------------------------------------
 
-//Returns the JSON object from the sprinklr stream call with an added field for the tweet text
-app.get('/insertTweet', function (request, res1) {
-
+//The actual function that makes the sprinklr and twitter API calls and passes the correct success handler.
+var handler = function(request, resp, succ)
+{
 	var url_parts = url.parse(request.url, true);
 	var query = url_parts.query;
 	var options = {
@@ -109,7 +111,7 @@ app.get('/insertTweet', function (request, res1) {
 				if(obj[i].snType == 'TWITTER')
 					id = id + ',' + obj[i].snMsgId;
 			}
-			twitter.getCustomApiCall('/statuses/lookup.json', {id}, error, successInsertTweet, res1, obj);
+			twitter.getCustomApiCall('/statuses/lookup.json', {id}, error, succ, resp, obj);
 		}
 		else
 		{
@@ -122,107 +124,26 @@ app.get('/insertTweet', function (request, res1) {
 	req.on('error', (e) => {
 	  console.error(e);
 	});
-})
+}
+
+//Returns the JSON object from the sprinklr stream call with an added field for the tweet text
+app.get('/insertTweet', function (request, res) { handler(request, res, successInsertTweet); })
 
 //Returns a JSON object that is a mapping of tweet ids to tweet text
-app.get('/tweet', function (request, res1) {
-
-	var url_parts = url.parse(request.url, true);
-	var query = url_parts.query;
-	var options = {
-		host: 'api2.sprinklr.com',
-  		port: 443,
-  		path: '/sandbox/api/v1/stream/' + request.query.id + '/feed?start=' + request.query.start + '&rows=' + request.query.rows,
-  		method: 'GET',
-  		headers: {'Authorization' : request.get('Authorization'), 'key': request.get('key')}
-	};
-	var req = https.request(options, (res) => {
-	  console.log('statusCode:', res.statusCode);
-	  var data = '';
-	  res.on('data', (d) => {
-		data += d;
-	  });
-
-	  res.on('end', function(){
-	  	if(res.statusCode == 200)
-	  	{
-	  		var id = new String();
-	  		try{
-			    var obj = JSON.parse(data);
-			    id = obj[0].snMsgId;
-			}
-			catch(err){
-				res1.end("Unable to parse response from twitter. Try making the request again with fewer rows.");
-			}
-			for(var i = 1; i < obj.length; i ++)
-			{
-				if(obj[i].snType == 'TWITTER')
-					id = id + ',' + obj[i].snMsgId;
-			}
-			twitter.getCustomApiCall('/statuses/lookup.json', {id}, error, successTweet, res1, obj);
-		}
-		else
-		{
-			res1.send("Call to sprinklr not successful. (Error code: " + res.statusCode + ")");
-		}
-	  });
-	});
-	req.end();
-
-	req.on('error', (e) => {
-	  console.error(e);
-	});
-})
+app.get('/tweet', function (request, res) { handler(request, res, successTweet); })
 
 //Returns the JSON object from the sprinklr stream call with added fields for the tweet text and user handle.
-app.get('/populateTweet', function (request, res1) {
+app.get('/populateTweet', function (request, res) { handler(request, res, successPopulateTweet); })
 
-	var url_parts = url.parse(request.url, true);
-	var query = url_parts.query;
-	var options = {
-		host: 'api2.sprinklr.com',
-  		port: 443,
-  		path: '/sandbox/api/v1/stream/' + request.query.id + '/feed?start=' + request.query.start + '&rows=' + request.query.rows,
-  		method: 'GET',
-  		headers: {'Authorization' : request.get('Authorization'), 'key': request.get('key')}
-	};
-	var req = https.request(options, (res) => {
-	  console.log('statusCode:', res.statusCode);
-	  var data = '';
-	  res.on('data', (d) => {
-		data += d;
-	  });
-
-	  res.on('end', function(){
-	  	if(res.statusCode == 200)
-	  	{
-	  		var id = new String();
-	  		try{
-			    var obj = JSON.parse(data);
-			    id = obj[0].snMsgId;
-			    for(var i = 1; i < obj.length; i ++)
-				{
-					if(obj[i].snType == 'TWITTER')
-						id = id + ',' + obj[i].snMsgId;
-				}
-				twitter.getCustomApiCall('/statuses/lookup.json', {id}, error, successPopulateTweet, res1, obj);
-			}
-			catch(err){
-				console.log("Error parsing JSON object from sprinklr API call.");
-				res1.end("Unable to parse response from sprinklr. Try making the request again with fewer rows.");
-			}
-		}
-		else
-		{
-			res1.send("Call to sprinklr not successful. (Error code: " + res.statusCode + ")");
-		}
-	  });
-	});
-	req.end();
-
-	req.on('error', (e) => {
-	  console.error(e);
-	});
+app.get('/', function(req, res){
+	fs.readFile('./index.html', function (err, html) {
+	    if (err) {
+	        throw err; 
+	    }       
+	        res.writeHeader(200, {"Content-Type": "text/html"});  
+	        res.write(html);  
+	        res.end();  
+    })
 })
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^End of get handlers.^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
