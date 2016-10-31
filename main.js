@@ -89,13 +89,16 @@ app.get('/insertTweet', function (request, res1) {
 	};
 	var req = https.request(options, (res) => {
 	  console.log('statusCode:', res.statusCode);
-
+	   var data = '';
 	  res.on('data', (d) => {
+		data += d;
+	  });
+	  res.on('end', function(){
 	  	if(res.statusCode == 200)
 	  	{
 	  		var id = new String();
 	  		try{
-			    var obj = JSON.parse(d);
+			    var obj = JSON.parse(data);
 			    id = obj[0].snMsgId;
 			}
 			catch(err){
@@ -135,13 +138,17 @@ app.get('/tweet', function (request, res1) {
 	};
 	var req = https.request(options, (res) => {
 	  console.log('statusCode:', res.statusCode);
-
+	  var data = '';
 	  res.on('data', (d) => {
+		data += d;
+	  });
+
+	  res.on('end', function(){
 	  	if(res.statusCode == 200)
 	  	{
 	  		var id = new String();
 	  		try{
-			    var obj = JSON.parse(d);
+			    var obj = JSON.parse(data);
 			    id = obj[0].snMsgId;
 			}
 			catch(err){
@@ -183,28 +190,6 @@ app.get('/populateTweet', function (request, res1) {
 	  console.log('statusCode:', res.statusCode);
 	  var data = '';
 	  res.on('data', (d) => {
-	  	/*if(res.statusCode == 200)
-	  	{
-	  		var id = new String();
-	  		try{
-			    var obj = JSON.parse(d);
-			    id = obj[0].snMsgId;
-			    for(var i = 1; i < obj.length; i ++)
-				{
-					if(obj[i].snType == 'TWITTER')
-						id = id + ',' + obj[i].snMsgId;
-				}
-				twitter.getCustomApiCall('/statuses/lookup.json', {id}, error, successPopulateTweet, res1, obj);
-			}
-			catch(err){
-				console.log("Error parsing JSON object from sprinklr API call.");
-				res1.end("Unable to parse response from sprinklr. Try making the request again with fewer rows.");
-			}
-		}
-		else
-		{
-			res1.send("Call to sprinklr not successful. (Error code: " + res.statusCode + ")");
-		}*/
 		data += d;
 	  });
 
