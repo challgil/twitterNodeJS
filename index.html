@@ -594,7 +594,7 @@
 	    		res = res.substring(1, res.length - 1);
 	    		for(var i = 0; i < res.length; i++)
 	    		{
-	    			if(res.charAt(i) == ',' && res.charAt(i - 1) == '"')
+	    			if(res.charAt(i) == ',' && (res.charAt(i - 1) == '"' || res.charAt(i - 1) == '}' || res.charAt(i - 1) == ']'))
 	    				res = res.substring(0, i+1) + '<br>' + res.substring(i+1, res.length);
 	    		}
 	      		document.getElementById("demo").innerHTML = res;
@@ -608,10 +608,34 @@
 	  	xhttp.send();
 
 	}
+	function populate()
+	{
+		
+		var xhttp = new XMLHttpRequest();
+	  	xhttp.onreadystatechange = function() {
+	    	if (this.readyState == 4 && this.status == 200) {
+	    		var res = this.responseText;
+	    		res = res.substring(1, res.length - 1);
+	    		for(var i = 0; i < res.length; i++)
+	    		{
+	    			if(res.charAt(i) == ',' && (res.charAt(i - 1) == '"' || res.charAt(i - 1) == '}' || res.charAt(i - 1) == ']'))
+	    				res = res.substring(0, i+1) + '<br>' + res.substring(i+1, res.length);
+	    		}
+	      		document.getElementById("demo").innerHTML = res;
+	    	}
+	  	};
+	  	var form = document.getElementById("filterForm");
+	  	var req = "id=" + form.elements[0].value + "&start=" + form.elements[1].value + "&rows=" + form.elements[2].value;
+	  	xhttp.open("GET", "http://127.0.0.1:8081/populateTweet?" + req, true);
+	  	xhttp.setRequestHeader("Authorization", "Bearer Mm1cgEYqF9TwPfO9aclnuysFZT3fMgeZ7DQEkLsZiSsxZjZhN2IyOGI0NmRjYzE4M2ViMWE5MGRjNThkYmFlMw==");
+	  	xhttp.setRequestHeader("key", "494shvmz4xakgzxzm2g4zr8u");
+	  	xhttp.send();
+
+	}
 	</script>
 </head>
 <body>
-<h2>Refresh</h2>
+<h2>Populate with Twitter Data</h2>
 <div class="endpoint" id="assetCreate">
     <div class="endpoint-dropdown" id="assetRetrieval-endpoint-dropdown">
         <div class="endpoint-header">
@@ -622,11 +646,12 @@
 					  Stream id:<br>
 					  <input type="text" name="id"><br>
 					  Start:<br>
-					  <input type="number" name="lastname"><br>
+					  <input type="number" name="start" value='0'><br>
 					  Rows:<br>
-					  <input type="number" name="lastname">
+					  <input type="number" name="rows" value="1">
 					</form>
-						<button type="button" onclick="req()">Refresh</button>
+						<button type="button" onclick="req()">Get Tweets</button>
+						<button type="button" onclick="populate()">Populate with Tweets</button>
 				</div>
 			</div>
 		</div>

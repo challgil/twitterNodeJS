@@ -20,54 +20,6 @@ var error = function (err, response, body) {
     console.error('ERROR [%s]', err);
 };
 
-//---------------------------------------Success handlers------------------------------------------------------------------
-
-var successInsertTweet = function (data, res, obj) {
-  	var tweetObj = JSON.parse(data);
-  	var map = {};
-  	for(var i = 0; i < tweetObj.length; i++)
-  	{
-  		map[tweetObj[i].id_str] = tweetObj[i].text;
-  	}
-  	for(var i = 0; i < obj.length; i++)
-  	{
-  		if(obj[i].snType == 'TWITTER')
-  			obj[i].messageText = map[obj[i].snMsgId];
-  	}
-  	res.setHeader('Content-Type', 'application/json');
-  	res.send(obj);
-};
-
-var successTweet = function (data, res, obj) {
-  	var tweetObj = JSON.parse(data);
-  	var map = {};
-  	for(var i = 0; i < tweetObj.length; i++)
-  	{
-  		map[tweetObj[i].id_str] = tweetObj[i].text;
-  	}
-  	res.setHeader('Content-Type', 'application/json');
-  	res.send(map);
-};
-
-var successPopulateTweet = function (data, res, obj) {
-  	var tweetObj = JSON.parse(data);
-  	var map = {};
-  	for(var i = 0; i < tweetObj.length; i++)
-  	{
-  		map[tweetObj[i].id_str] = tweetObj[i];
-  	}
-  	for(var i = 0; i < obj.length; i++)
-  	{
-  		if(obj[i].snType == 'TWITTER')
-  		{
-  			obj[i].messageText = map[obj[i].snMsgId].text;
-  			obj[i].senderProfile.user_handle = map[obj[i].snMsgId].user.screen_name;
-  		}
-  	}
-  	res.setHeader('Content-Type', 'application/json');
-  	res.send(obj);
-};
-
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, key");
@@ -82,6 +34,13 @@ var handler = function(request, resp, succ)
 {
 	var url_parts = url.parse(request.url, true);
 	var query = url_parts.query;
+	var sinceDate = request.query.sinceDate;
+	//if(!sinceDate)
+	//	sinceDate = '0';
+	var untilDate = request.query.untilDate;
+	//if(!untilDate)
+	//	untilDate = (Date.now() * 1000).toString();
+  	console.log(sinceDate);
 	var options = {
 		host: 'api2.sprinklr.com',
   		port: 443,
@@ -89,6 +48,10 @@ var handler = function(request, resp, succ)
   		method: 'GET',
   		headers: {'Authorization' : request.get('Authorization'), 'key': request.get('key')}
 	};
+	if(sinceDate)
+		options.path = options.path + '&sinceDate=' + sinceDate;
+	if(untilDate)
+		options.path = options.path + '&untilDate' + untilDate;
 	var req = https.request(options, (res) => {
 	  console.log('statusCode:', res.statusCode);
 	   var data = '';
@@ -98,24 +61,26 @@ var handler = function(request, resp, succ)
 	  res.on('end', function(){
 	  	if(res.statusCode == 200)
 	  	{
+	  		console.log("Successful call to sprinklr API!");
 	  		var id = new String();
 	  		try{
 			    var obj = JSON.parse(data);
 			    id = obj[0].snMsgId;
 			}
 			catch(err){
-				res1.end("Unable to parse response from twitter. Try making the request again with fewer rows.");
+				resp.end("Unable to parse response from twitter. Try making the request again with fewer rows.");
 			}
 			for(var i = 1; i < obj.length; i ++)
 			{
 				if(obj[i].snType == 'TWITTER')
 					id = id + ',' + obj[i].snMsgId;
 			}
-			twitter.getCustomApiCall('/statuses/lookup.json', {id}, error, succ, resp, obj);
+			twitter.getCustomApiCall('/statuses/lookup.json', {id}, error, resp, obj, succ);
 		}
 		else
 		{
-			res1.send("Call to sprinklr not successful. (Error code: " + res.statusCode + ")");
+			resp.writeHeader(res.statusCode, {"Content-Type": "text/html"}); 
+			resp.end("Call to sprinklr not successful. (Error code: " + res.statusCode + ")");
 		}
 	  });
 	});
@@ -127,13 +92,59 @@ var handler = function(request, resp, succ)
 }
 
 //Returns the JSON object from the sprinklr stream call with an added field for the tweet text
-app.get('/insertTweet', function (request, res) { handler(request, res, successInsertTweet); })
+app.get('/insertTweet', function (request, res) { 
+	handler(request, res, function (data, res, obj) {
+	  	var tweetObj = JSON.parse(data);
+	  	var map = {};
+	  	for(var i = 0; i < tweetObj.length; i++)
+	  	{
+	  		map[tweetObj[i].id_str] = tweetObj[i].text;
+	  	}
+	  	for(var i = 0; i < obj.length; i++)
+	  	{
+	  		if(obj[i].snType == 'TWITTER')
+	  			obj[i].message = map[obj[i].snMsgId];
+	  	}
+	  	res.setHeader('Content-Type', 'application/json');
+	  	res.send(obj);
+	});
+})
 
 //Returns a JSON object that is a mapping of tweet ids to tweet text
-app.get('/tweet', function (request, res) { handler(request, res, successTweet); })
+app.get('/tweet', function (request, res) { 
+	handler(request, res, function (data, res, obj) {
+	  	var tweetObj = JSON.parse(data);
+	  	var map = {};
+	  	for(var i = 0; i < tweetObj.length; i++)
+	  	{
+	  		map[tweetObj[i].id_str] = tweetObj[i].text;
+	  	}
+	  	res.setHeader('Content-Type', 'application/json');
+	  	res.send(map);
+	});
+})
 
 //Returns the JSON object from the sprinklr stream call with added fields for the tweet text and user handle.
-app.get('/populateTweet', function (request, res) { handler(request, res, successPopulateTweet); })
+app.get('/populateTweet', function (request, res) { 
+	handler(request, res, function (data, res, obj) {
+	  	var tweetObj = JSON.parse(data);
+	  	var map = {};
+	  	for(var i = 0; i < tweetObj.length; i++)
+	  	{
+	  		map[tweetObj[i].id_str] = tweetObj[i];
+	  	}
+	  	for(var i = 0; i < obj.length; i++)
+	  	{
+	  		if(obj[i].snType == 'TWITTER')
+	  		{
+	  			obj[i].message = map[obj[i].snMsgId].text;
+	  			obj[i].senderProfile.user_handle = map[obj[i].snMsgId].user.screen_name;
+	  		}
+	  	}
+	  	res.setHeader('Content-Type', 'application/json');
+	  	res.send(obj);
+	}); 
+})
 
 app.get('/', function(req, res){
 	fs.readFile('./index.html', function (err, html) {
@@ -144,6 +155,7 @@ app.get('/', function(req, res){
 	        res.write(html);  
 	        res.end();  
     })
+    console.log("index.html loaded");
 })
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^End of get handlers.^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
